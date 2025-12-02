@@ -1,6 +1,7 @@
----
+這是一份結構完整、專業且符合您需求的 `README.md`。我已經整合了所有必要的章節，並使用繁體中文（除了必要的英文術語）撰寫，確保您可以直接複製貼上。
 
-# AICUP 2025 Heart Segmentation Challenge
+```markdown
+# AICUP 2025 Heart Segmentation Challenge - 決賽解決方案 (SOTA Solution)
 
 本專案為 **AICUP 2025 心臟電腦斷層掃描影像分割競賽** 的原始程式碼與解決方案。
 我們的方法基於 **nnU-Net v2** 框架，並結合了 **標籤清洗 (Label Cleaning)**、**半監督學習 (Pseudo-labeling)** 以及 **機率灌水集成 (Probability Boosting Ensemble)** 策略，有效解決了小數據集與類別不平衡的問題。
@@ -49,15 +50,73 @@
 │   │   └── move_pseudo.py      # 搬運偽標籤至訓練集
 │   ├── inference/
 │   │   └── ensemble.py         # 加權集成 + 機率灌水核心腳本
-│   └── postprocess/
-│       ├── post_process.py     # 最終後處理 (Header修復、最大連通組件)
-│       └── pack_submission.py  # 打包上傳檔案
+│   ├── postprocess/
+│   │    ├── post_process.py     # 最終後處理 (Header修復、最大連通組件)
+│   │    └── pack_submission.py  # 打包上傳檔案
+│   └── utils/
+│       └── fix_dataset_json.py  # 自動生成 dataset.json 工具
 └── scripts/                    # (可選) 放置 .sh 訓練腳本
 ```
 
 ---
 
-## 3. 訓練流程與執行步驟 (Training Pipeline)
+## 3. 資料準備與格式要求 (Data Preparation & Structure)
+
+⚠️ **重要提示 (Important Note)**:
+本專案使用 nnU-Net 框架，因此資料集必須嚴格遵守 nnU-Net 的格式要求 (Dataset Fingerprint)。在開始訓練之前，請確保您的資料符合以下結構：
+
+### 3.1 資料夾結構 (Directory Structure)
+請在您的硬碟中建立三個資料夾，並將環境變數指向它們。
+其中 `nnUNet_raw` 必須包含原始資料，而 `nnUNet_preprocessed` 與 `nnUNet_results` 請保持**為空 (Empty)**，程式將自動寫入資料。
+
+```text
+(Root Directory)
+├── nnUNet_raw/               <-- [User Input] 需手動放入資料
+│   └── Dataset101_Heart/
+│       ├── dataset.json
+│       ├── imagesTr/
+│       ├── labelsTr/
+│       └── imagesTs/
+│
+├── nnUNet_preprocessed/      <-- [Auto-Generated] 請留空，預處理腳本會自動輸出至此
+│
+└── nnUNet_results/           <-- [Auto-Generated] 請留空，訓練腳本會將模型權重存於此
+```
+
+請將 `nnUNet_raw` 環境變數指向的路徑設定如下：
+
+```text
+nnUNet_raw/
+└── Dataset101_Heart/
+    ├── dataset.json          <-- (必須包含正確的 metadata)
+    ├── imagesTr/             <-- (訓練影像 Training Images)
+    │   ├── patient0001_0000.nii.gz  <-- 檔名必須包含四位數後綴 _0000
+    │   ├── patient0002_0000.nii.gz
+    │   └── ...
+    ├── labelsTr/             <-- (訓練標籤 Training Labels)
+    │   ├── patient0001.nii.gz       <-- 檔名不含 _0000
+    │   ├── patient0002.nii.gz
+    │   └── ...
+    └── imagesTs/             <-- (測試影像 Test Images)
+        ├── patient0051_0000.nii.gz
+        └── ...
+```
+
+### 3.2 關鍵命名規則 (Naming Convention)
+*   **影像檔 (Images)**：必須以 `.nii.gz` 結尾，且**必須**包含模態標識符 `_0000` (例如 `case_001_0000.nii.gz`)。
+*   **標籤檔 (Labels)**：必須以 `.nii.gz` 結尾，且**不可**包含 `_0000` (例如 `case_001.nii.gz`)。
+
+### 3.3 自動生成 dataset.json (Generating dataset.json)
+若您的環境中沒有 `dataset.json`，請執行我們提供的輔助腳本來根據現有檔案自動生成：
+```bash
+# 請確保 imagesTr 與 labelsTr 檔案已就位
+python src/utils/fix_dataset_json.py
+# (注意：請確認 fix_dataset_json.py 內的檔案路徑設定正確)
+```
+
+---
+
+## 4. 訓練流程與執行步驟 (Training Pipeline)
 
 ### 步驟一：資料前處理 (Data Preprocessing)
 由於原始資料的 Label 1 (Myocardium) 存在部分孤立噪點，我們先執行清洗。
@@ -87,7 +146,7 @@ nnUNetv2_train 101 3d_fullres 3 --npz
 3.  將這 5 筆資料搬運至訓練集並更新 `dataset.json`：
     ```bash
     python src/preprocess/move_pseudo.py
-    # (請手動或使用腳本更新 dataset.json 的 numTraining 為 55)
+    # (可再次使用 fix_dataset_json.py 自動更新 dataset.json)
     ```
 4.  **重新訓練 Fold 1** (使用強化後的數據集)：
     ```bash
@@ -124,7 +183,7 @@ python src/postprocess/pack_submission.py
 
 ---
 
-## 4. 參數設定說明 (Parameter Settings)
+## 5. 參數設定說明 (Parameter Settings)
 
 本方案針對本次任務特性進行了以下關鍵調整：
 
@@ -145,7 +204,7 @@ python src/postprocess/pack_submission.py
 
 ---
 
-## 5. 致謝 (Credits)
+## 6. 致謝 (Credits)
 本專案使用了 [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) 作為核心框架。
 ```bibtex
 @article{isensee2021nnunet,

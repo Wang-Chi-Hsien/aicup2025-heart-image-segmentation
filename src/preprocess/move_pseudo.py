@@ -2,21 +2,23 @@ import os
 import shutil
 
 # ==========================================
-# 1. 關鍵設定 (請確認您的路徑!)
+# [修改點] 混合使用 環境變數 + 相對路徑
 # ==========================================
-# 來源 A: 原始測試影像 (imagesTs)
-test_images_dir = "nnUNet_raw/Dataset101_Heart/imagesTs"
+# 1. 取得 nnU-Net 資料路徑
+nnunet_raw = os.environ.get('nnUNet_raw')
+if nnunet_raw is None:
+    raise RuntimeError("請先設定 export nnUNet_raw=...")
 
-# 來源 B: 您的最佳預測結果 (Mask)
-# ⚠️ 請改成您分數最高、做過後處理的那個資料夾名稱！
-# 例如: submission_final_safe 或 output_best4_postprocessed
-best_prediction_dir = "output_fold0123_fixed_postprocessed" 
+test_images_dir = os.path.join(nnunet_raw, "Dataset101_Heart/imagesTs")
+target_imagesTr = os.path.join(nnunet_raw, "Dataset101_Heart/imagesTr")
+target_labelsTr = os.path.join(nnunet_raw, "Dataset101_Heart/labelsTr")
 
-# 目標位置 (訓練集)
-target_imagesTr = "nnUNet_raw/Dataset101_Heart/imagesTr"
-target_labelsTr = "nnUNet_raw/Dataset101_Heart/labelsTr"
+# 2. 設定預測結果來源 (相對路徑)
+# 這裡指向主辦方剛剛生成的、做過後處理的預測結果
+best_prediction_dir = "./submission_temp_for_pseudo" 
 
-# 您的 Top 5 名單 (已幫您填好)
+# 3. 為了確保重現性，將 ID 寫死 (Hard-code)
+# 這樣主辦方不需要重新篩選，直接用這 5 個最好的
 selected_cases = ['patient0057', 'patient0097', 'patient0061', 'patient0084', 'patient0094']
 
 print(f"🚀 開始搬運 5 筆偽標籤資料...")

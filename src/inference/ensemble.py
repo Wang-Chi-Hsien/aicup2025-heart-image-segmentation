@@ -2,16 +2,24 @@ import numpy as np
 import nibabel as nib
 import os
 
-# ==============================
-# 1. 設定路徑
-# ==============================
-folder_group_main = "temp_pred_old_f023" # 內含 F0, F2, F3 (權重已由 nnU-Net 平均過)
-folder_new_1 = "temp_pred_new_f1"        # New F1
-folder_2d = "temp_pred_2d_fold2"         # 2D Model
+# ==========================================
+# [修改點] 使用相對路徑
+# ==========================================
+# 這些資料夾名稱必須跟您 README 中叫主辦方執行的指令輸出一致
+folder_group_main = "./predictions_old_folds_raw" # 對應 Old Folds (0,2,3)
+folder_new_1 = "./predictions_new_fold1_raw"      # 對應 New Fold 1
+# folder_2d = "./predictions_2d_raw"              # 如果沒用 2D 可以註解掉
 
-# 輸出
-output_folder = "submission_optimized_final"
-raw_images_folder = "nnUNet_raw/Dataset101_Heart/imagesTs" # 用來修 Header
+# 輸出路徑
+output_folder = "./submission_ensemble_raw"
+
+# 用來修復 Header 的原始影像 (環境變數)
+nnunet_raw = os.environ.get('nnUNet_raw')
+if nnunet_raw:
+    raw_images_folder = os.path.join(nnunet_raw, "Dataset101_Heart/imagesTs")
+else:
+    print("⚠️ 警告：未設定 nnUNet_raw，將無法進行 Header 修復")
+    raw_images_folder = None
 
 os.makedirs(output_folder, exist_ok=True)
 

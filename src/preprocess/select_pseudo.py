@@ -4,13 +4,12 @@ import nibabel as nib
 from tqdm import tqdm
 
 # ==========================================
-# 1. 設定路徑
+# [修改點] 使用相對路徑
 # ==========================================
-# 您的機率圖資料夾 (.npz)
-# 請指向您目前最強模型 (例如 Best 4-Fold 集成) 的 npz 輸出位置
-npz_folder = "temp_pred_fold0123_probs" 
+# 假設主辦方執行 inference 後，檔案會在這個資料夾
+npz_folder = "./predictions_for_pseudo" 
 
-# 您想挑選幾個做偽標籤？
+# 如果您希望主辦方自己指定，也可以用 argparse，但相對路徑最簡單
 TOP_K = 5 
 
 print(f"🚀 啟動偽標籤自動篩選系統...")

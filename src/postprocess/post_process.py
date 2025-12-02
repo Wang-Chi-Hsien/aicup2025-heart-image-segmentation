@@ -4,11 +4,13 @@ import nibabel as nib
 import numpy as np
 from skimage.measure import label
 
-# --- 設定路徑 ---
-# nnU-Net 預測結果的輸出路徑 (從上一步驟)
-prediction_folder = "/home/temp/Luke/AICUP_Heart/submission_optimized_final"
-# 處理完後要存放的路徑
-postprocessed_folder = "/home/temp/Luke/AICUP_Heart/postprocessed_final_ensemble/"
+# --- 設定路徑 (已修改為相對路徑) ---
+# 輸入：nnU-Net 預測結果 (或是集成後的結果) 的輸出路徑
+# 使用相對路徑，預設在專案根目錄下
+prediction_folder = "./submission_optimized_final"
+
+# 輸出：處理完後要存放的路徑
+postprocessed_folder = "./postprocessed_final_ensemble"
 
 if not os.path.exists(postprocessed_folder):
     os.makedirs(postprocessed_folder)
@@ -44,6 +46,10 @@ def keep_largest_connected_component(volume, labels_info):
 # 從 dataset.json 讀取標籤資訊
 labels_info = {1: "myocardium", 2: "aortic_valve", 3: "calcification"}
 
+print(f"🚀 開始執行後處理...")
+print(f"來源: {prediction_folder}")
+print(f"目標: {postprocessed_folder}")
+
 for filename in os.listdir(prediction_folder):
     if filename.endswith(".nii.gz"):
         print(f"Processing {filename}...")
@@ -60,4 +66,4 @@ for filename in os.listdir(prediction_folder):
         output_nifti = nib.Nifti1Image(cleaned_volume.astype(np.uint8), nifti.affine, nifti.header)
         nib.save(output_nifti, os.path.join(postprocessed_folder, filename))
         
-print("Post-processing finished!")
+print("✅ Post-processing finished!")

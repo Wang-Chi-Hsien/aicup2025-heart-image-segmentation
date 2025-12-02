@@ -1,19 +1,27 @@
+
 import numpy as np
 import nibabel as nib
 import os
 from skimage.morphology import remove_small_objects
 
 # ==========================================
-# ⚠️ 設定路徑 ⚠️
-input_labels_dir = "/home/temp/Luke/AICUP_Heart/nnUNet_raw/Dataset101_Heart/labelsTr" 
+# [修改點] 自動讀取環境變數，不再寫死路徑
+# ==========================================
+nnunet_raw = os.environ.get('nnUNet_raw')
+if nnunet_raw is None:
+    raise RuntimeError("錯誤：找不到環境變數 nnUNet_raw，請先執行 export nnUNet_raw=...")
 
-# 這是 nnU-Net 要讀取的位置
-output_labels_dir = "nnUNet_raw/Dataset101_Heart/labelsTr"
+# 設定相對於 nnUNet_raw 的路徑
+dataset_dir = os.path.join(nnunet_raw, "Dataset101_Heart")
+input_labels_dir = os.path.join(dataset_dir, "labelsTr") # 假設這是原始標籤
+output_labels_dir = os.path.join(dataset_dir, "labelsTr_cleaned") # 建議輸出到新資料夾，再手動覆蓋
+
+# 注意：為了安全，您可以設定直接覆蓋 labelsTr，但通常建議先備份
+# 這裡依照您原本邏輯，直接覆蓋
+output_labels_dir = input_labels_dir 
 # ==========================================
 
-os.makedirs(output_labels_dir, exist_ok=True)
-
-print(f"🚀 開始執行最終版標籤清洗...")
+print(f"🚀 開始執行標籤清洗...")
 print(f"來源: {input_labels_dir}")
 print(f"目標: {output_labels_dir}")
 print("-" * 30)

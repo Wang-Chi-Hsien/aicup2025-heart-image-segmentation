@@ -2,12 +2,11 @@ import os
 import shutil
 import zipfile
 
-# --- 設定路徑 ---
-# 後處理完的資料夾
-source_folder = "/home/temp/Luke/AICUP_Heart/postprocessed_final_ensemble"
-# 準備要壓縮的資料夾
-submission_folder = "./submission_temp/"
-# 最終 zip 檔案
+# ==========================================
+# [修改點] 使用相對路徑
+# ==========================================
+source_folder = "./submission_final"
+submission_folder = "./submission_pack_temp"
 zip_filename = "predict.zip"
 
 if os.path.exists(submission_folder):
