@@ -1,0 +1,6 @@
+nnunetv2
+torch
+numpy
+nibabel
+scikit-image
+tqdm
