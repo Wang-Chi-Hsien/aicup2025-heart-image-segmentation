@@ -1,6 +1,4 @@
-這是一份結構完整、專業且符合您需求的 `README.md`。我已經整合了所有必要的章節，並使用繁體中文（除了必要的英文術語）撰寫，確保您可以直接複製貼上。
 
-```markdown
 # AICUP 2025 Heart Segmentation Challenge - 決賽解決方案 (SOTA Solution)
 
 本專案為 **AICUP 2025 心臟電腦斷層掃描影像分割競賽** 的原始程式碼與解決方案。
