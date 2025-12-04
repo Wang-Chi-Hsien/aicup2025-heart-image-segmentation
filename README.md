@@ -141,14 +141,14 @@ nnUNetv2_plan_and_preprocess -d 101 -c 3d_fullres --verify_dataset_integrity
     由於我們發現 Fold 2 的表現最好，因此只針對 Fold 2 進行 2D 訓練。
 
     1. **執行 2D 配置的預處理** (若之前未執行過)：
-    ```bash
-    nnUNetv2_plan_and_preprocess -d 101 -c 2d --verify_dataset_integrity
-    ```
+        ```bash
+        nnUNetv2_plan_and_preprocess -d 101 -c 2d --verify_dataset_integrity
+        ```
 
     2. **執行訓練 (Fold 2)**：
-    ```bash
-    nnUNetv2_train 101 2d 2 --npz
-    ```
+        ```bash
+        nnUNetv2_train 101 2d 2 --npz
+        ```
 
 
 ### 步驟三：偽標籤強化 (Pseudo-labeling)
