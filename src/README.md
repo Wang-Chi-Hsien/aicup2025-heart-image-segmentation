@@ -127,12 +127,29 @@ nnUNetv2_plan_and_preprocess -d 101 -c 3d_fullres --verify_dataset_integrity
 ```
 
 ### 步驟二：基底模型訓練 (Base Model Training)
-訓練基礎的 3D U-Net 模型。根據交叉驗證結果，我們保留表現最好的 Fold 0, 2, 3。
-```bash
-nnUNetv2_train 101 3d_fullres 0 --npz
-nnUNetv2_train 101 3d_fullres 2 --npz
-nnUNetv2_train 101 3d_fullres 3 --npz
-```
+1. **訓練基礎的 3D U-Net 模型**
+    根據交叉驗證結果，我們保留表現最好的 Fold 0, 2, 3。
+    ```bash
+    nnUNetv2_train 101 3d_fullres 0 --npz
+    nnUNetv2_train 101 3d_fullres 2 --npz
+    nnUNetv2_train 101 3d_fullres 3 --npz
+    ```
+
+
+2. **訓練 2D 模型 (Training 2D Model)**
+    為了捕捉 Z 軸切片間的銳利邊緣，我們額外訓練了一個 2D U-Net。
+    由於我們發現 Fold 2 的表現最好，因此只針對 Fold 2 進行 2D 訓練。
+
+    1. **執行 2D 配置的預處理** (若之前未執行過)：
+    ```bash
+    nnUNetv2_plan_and_preprocess -d 101 -c 2d --verify_dataset_integrity
+    ```
+
+    2. **執行訓練 (Fold 2)**：
+    ```bash
+    nnUNetv2_train 101 2d 2 --npz
+    ```
+
 
 ### 步驟三：偽標籤強化 (Pseudo-labeling)
 為了增強模型的泛化能力，我們利用測試集進行半監督學習：
@@ -164,6 +181,7 @@ nnUNetv2_train 101 3d_fullres 3 --npz
     # 範例指令
     nnUNetv2_predict -i ... -o temp_pred_old_f023 -f 0 2 3 --save_probabilities
     nnUNetv2_predict -i ... -o temp_pred_new_f1 -f 1 --save_probabilities
+    nnUNetv2_predict -i ... -o predictions_2d_raw -f 1 --save_probabilities
     ```
 
 2.  **執行加權集成 (Weighted Ensemble)**：

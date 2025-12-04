@@ -8,7 +8,7 @@ import os
 # 這些資料夾名稱必須跟您 README 中叫主辦方執行的指令輸出一致
 folder_group_main = "./predictions_old_folds_raw" # 對應 Old Folds (0,2,3)
 folder_new_1 = "./predictions_new_fold1_raw"      # 對應 New Fold 1
-# folder_2d = "./predictions_2d_raw"              # 如果沒用 2D 可以註解掉
+folder_2d = "./predictions_2d_raw"              # 如果沒用 2D 可以註解掉
 
 # 輸出路徑
 output_folder = "./submission_ensemble_raw"
