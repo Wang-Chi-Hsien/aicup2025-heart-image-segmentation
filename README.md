@@ -152,7 +152,7 @@ To enhance the model's generalization capability, we use the test set for semi-s
     ```bash
     python src/preprocess/select_pseudo.py
     ```
-3.  將這 5 筆資料搬運至訓練集並更新 `dataset.json`：
+3.  Move these 5 entries to the training set and update `dataset.json`：
     ```bash
     python src/preprocess/move_pseudo.py
     ## (You can use fix_dataset_json.py again to auto-update dataset.json)
@@ -213,7 +213,7 @@ For extremely small targets (Aortic Valve, Calcification), the model tends to be
 
 ---
 
-## 6. 致謝 (Credits)
+## 6. Credits
 This project uses [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) as the core framework.
 ```bibtex
 @article{isensee2021nnunet,
