@@ -1,3 +1,232 @@
+# AICUP 2025 Heart Segmentation Challenge - Final Solution (SOTA)
+
+This repository contains the source code and solution for the **AICUP 2025 Heart CT Image Segmentation Challenge**.
+Our approach is built upon the **nnU-Net v2** framework, integrating **Label Cleaning**, **Semi-Supervised Learning (Pseudo-labeling)**, and **Probability Boosting Ensemble** strategies. These methods effectively address challenges related to small datasets and class imbalance.
+
+---
+
+## 1. Environment Setup
+
+### Hardware Requirements
+* **OS:** Linux (Ubuntu 20.04/22.04 recommended)
+* **Python:** 3.10+
+* **GPU:** NVIDIA RTX 3090 / 4090 / 5090 (Recommended VRAM $\ge$ 24GB)
+
+### Installation Steps
+1.  **Install Basic Packages**:
+    ```bash
+    # Install PyTorch (Choose the command appropriate for your CUDA version)
+    pip install torch torchvision torchaudio
+
+    # Install nnU-Net v2 and other dependencies
+    pip install nnunetv2
+    pip install numpy nibabel scikit-image tqdm
+    ```
+
+2.  **Set nnU-Net Environment Variables**:
+    Execute the following commands in your terminal (or add them to your `~/.bashrc`) to define the data storage paths:
+    ```bash
+    export nnUNet_raw="/path/to/your/nnUNet_raw"
+    export nnUNet_preprocessed="/path/to/your/nnUNet_preprocessed"
+    export nnUNet_results="/path/to/your/nnUNet_results"
+    ```
+
+---
+
+## 2. File Structure
+
+Please organize the code as follows:
+
+```text
+.
+├── README.md                   # This documentation
+├── src/
+│   ├── preprocess/
+│   │   ├── clean_labels.py     # Label Cleaning (Morphological noise removal)
+│   │   ├── select_pseudo.py    # Filter high-confidence pseudo-labels
+│   │   └── move_pseudo.py      # Move pseudo-labels to the training set
+│   ├── inference/
+│   │   └── ensemble.py         # Weighted Ensemble + Probability Boosting core script
+│   ├── postprocess/
+│   │   ├── post_process.py     # Final Post-processing (Header fix, Largest Component)
+│   │   └── pack_submission.py  # Pack files for submission
+│   └── utils/
+│       └── fix_dataset_json.py # Tool to automatically generate dataset.json
+└── scripts/                    # (Optional) Place .sh training scripts here
+```
+
+## 3. Data Preparation & Structure
+⚠️ Important Note: This project uses the nnU-Net framework, so the dataset must strictly adhere to nnU-Net format requirements (Dataset Fingerprint). Before starting training, please ensure your data conforms to the following structure:
+
+### 3.1 Directory Structure
+Please create three folders on your disk and point the environment variables to them. nnUNet_raw must contain the raw data, while nnUNet_preprocessed and nnUNet_results should remain Empty, as the program will automatically write data to them.
+
+```text
+(Root Directory)
+├── nnUNet_raw/               <-- [User Input] Manually place data here
+│   └── Dataset101_Heart/
+│       ├── dataset.json
+│       ├── imagesTr/
+│       ├── labelsTr/
+│       └── imagesTs/
+│
+├── nnUNet_preprocessed/      <-- [Auto-Generated] Keep empty, preprocessing scripts output here
+│
+└── nnUNet_results/           <-- [Auto-Generated] Keep empty, training scripts save weights here
+```
+Please set the path pointed to by the nnUNet_raw environment variable as follows:
+
+```text
+nnUNet_raw/
+└── Dataset101_Heart/
+    ├── dataset.json          <-- (Must contain correct metadata)
+    ├── imagesTr/             <-- (Training Images)
+    │   ├── patient0001_0000.nii.gz  <-- Filename must include the 4-digit suffix _0000
+    │   ├── patient0002_0000.nii.gz
+    │   └── ...
+    ├── labelsTr/             <-- (Training Labels)
+    │   ├── patient0001.nii.gz       <-- Filename must NOT include _0000
+    │   ├── patient0002.nii.gz
+    │   └── ...
+    └── imagesTs/             <-- (Test Images)
+        ├── patient0051_0000.nii.gz
+        └── ...
+```
+### 3.2 Key Naming Convention
+Images: Must end with .nii.gz and must include the modality identifier _0000 (e.g., case_001_0000.nii.gz).
+
+Labels: Must end with .nii.gz and must not include _0000 (e.g., case_001.nii.gz).
+
+### 3.3 Generating dataset.json
+If your environment does not have a dataset.json, please run our provided utility script to automatically generate it based on existing files:
+
+```bash
+# Ensure imagesTr and labelsTr files are in place
+python src/utils/fix_dataset_json.py
+# (Note: Please check that file paths inside fix_dataset_json.py are correct)
+```
+---
+## 4. Training Pipeline
+
+### Step 1: Data Preprocessing
+Since the original data's Label 1 (Myocardium) contains some isolated noise, we first perform cleaning.
+```bash
+# Clean raw labels (Remove isolated spots < 100 voxels)
+python src/preprocess/clean_labels.py
+
+# Execute nnU-Net standard preprocessing
+nnUNetv2_plan_and_preprocess -d 101 -c 3d_fullres --verify_dataset_integrity
+```
+
+### Step 2: Base Model Training
+1. **Train basic 3D U-Net models**
+    Based on cross-validation results, we keep the best performing Folds 0, 2, and 3.
+
+    ```bash
+    nnUNetv2_train 101 3d_fullres 0 --npz
+    nnUNetv2_train 101 3d_fullres 2 --npz
+    nnUNetv2_train 101 3d_fullres 3 --npz
+    ```
+
+
+2. **Training 2D Model**
+    To capture sharp edges between Z-axis slices, we additionally trained a 2D U-Net. 
+    Since we found Fold 2 performed the best, we only trained the 2D model on Fold 2.
+
+    1. **Run preprocessing for 2D configuration** (If not run previously):
+        ```bash
+        nnUNetv2_plan_and_preprocess -d 101 -c 2d --verify_dataset_integrity
+        ```
+
+    2. **Execute Training (Fold 2):**：
+        ```bash
+        nnUNetv2_train 101 2d 2 --npz
+        ```
+
+
+### Step 3: Pseudo-labeling
+To enhance the model's generalization capability, we use the test set for semi-supervised learning:
+
+1. Use the strongest base model (Fold 2) to predict on the test set.
+2. Run the selection script to automatically pick the top 5 data entries with the highest Confidence Score:
+    ```bash
+    python src/preprocess/select_pseudo.py
+    ```
+3.  將這 5 筆資料搬運至訓練集並更新 `dataset.json`：
+    ```bash
+    python src/preprocess/move_pseudo.py
+    ## (You can use fix_dataset_json.py again to auto-update dataset.json)
+    ```
+4.  **Retrain Fold 1** (Using the enhanced dataset):
+    ```bash
+    # Must run preprocessing again to update fingerprints
+    nnUNetv2_plan_and_preprocess -d 101 -c 3d_fullres --verify_dataset_integrity
+    
+    # Train enhanced Fold 1
+    nnUNetv2_train 101 3d_fullres 1 --npz
+    ```
+
+### Step 4: Inference & Ensemble
+This is the key step to improving the score. We combine "Old Models" and "New Models" and optimize probabilities for small objects.
+
+1.  **Generate Probability Maps (.npz)**：
+    Ensure the --save_probabilities parameter is added when running predictions for all models.
+    ```bash
+    # Example commands
+    nnUNetv2_predict -i ... -o temp_pred_old_f023 -f 0 2 3 --save_probabilities
+    nnUNetv2_predict -i ... -o temp_pred_new_f1 -f 1 --save_probabilities
+    nnUNetv2_predict -i ... -o predictions_2d_raw -f 1 --save_probabilities
+    ```
+
+2.  **Execute Weighted Ensemble**：
+    Run the following script to merge the two sets of probability maps:
+    ```bash
+    python src/inference/ensemble.py
+    ```
+
+### Step 5: Post-processing & Packing
+Finally, perform morphological post-processing and NIfTI Header repair, then pack for submission.
+```bash
+python src/postprocess/post_process.py
+python src/postprocess/pack_submission.py
+```
+
+---
+
+## 5. Parameter Settings
+
+This solution includes the following key adjustments tailored to the specific characteristics of this task:
+
+### A. Ensemble Weights
+We adopt a "Strong + Strong" strategy but give higher stability weight to the verified old models.
+*   **Group Old (Folds 0, 2, 3)**: Weights **3.2** (Representing the majority vote base).
+*   **Group New (Fold 1)**: Weights **1.0** (Introducing new features from pseudo-labels, but not dominating the decision).
+
+### B. Probability Boosting
+For extremely small targets (Aortic Valve, Calcification), the model tends to be conservative (predicting as background). We calibrate at the Softmax probability layer:
+*   **Label 2 (Aortic Valve)**: Probability value $\times$ **1.15**
+*   **Label 3 (Calcification)**: Probability value $\times$ **1.15**
+*   **Goal**： Lower the decision threshold for small objects, significantly improving Recall.
+### C. Post-processing
+*   **Keep Largest Component**: For Label 1 (Myocardium), only keep the largest connected region to remove spraying noise.
+*   **Geometric Repair**: Disable dilation and closing operations; only preserve original structures to avoid misjudgments.
+
+---
+
+## 6. 致謝 (Credits)
+This project uses [nnU-Net](https://github.com/MIC-DKFZ/nnUNet) as the core framework.
+```bibtex
+@article{isensee2021nnunet,
+  title={nnU-Net: a self-configuring method for deep learning-based biomedical image segmentation},
+  author={Isensee, Fabian and Jaeger, Paul F and Kohl, Simon AA and Petersen, Jens and Maier-Hein, Klaus H},
+  journal={Nature methods},
+  volume={18},
+  number={2},
+  pages={203--211},
+  year={2021},
+  publisher={Nature Publishing Group}
+}
+```
 
 # AICUP 2025 Heart Segmentation Challenge - 決賽解決方案 (SOTA Solution)
 
